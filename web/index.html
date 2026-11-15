@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FieldScope Lab · 字段范围采集演练台</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="mark" aria-hidden="true"></span>
+      <div>
+        <h1>FieldScope Lab</h1>
+        <p>本地字段范围采集演练台</p>
+      </div>
+    </div>
+    <div class="topmeta">
+      <span class="badge badge-local">仅本地 · 无外网</span>
+      <span class="badge badge-fict">全部数据为虚构</span>
+      <span id="datasetMeta" class="dataset-meta">正在载入数据集…</span>
+    </div>
+  </header>
+
+  <nav class="purposes" id="purposeTabs" aria-label="用途切换"></nav>
+
+  <main class="layout">
+    <section class="column column-main">
+      <article class="panel" id="scopePanel">
+        <header class="panel-head">
+          <div>
+            <p class="eyebrow">01 · 授权</p>
+            <h2>用途与可见字段</h2>
+          </div>
+          <div class="head-actions">
+            <button class="btn btn-quiet" id="resetFields">恢复默认</button>
+            <button class="btn btn-primary" id="applyFields" disabled>应用字段范围</button>
+          </div>
+        </header>
+        <p class="lede" id="purposeDesc"></p>
+        <div class="scope-summary">
+          <div class="metric"><span class="metric-label">已授权</span><strong id="appliedCount">–</strong></div>
+          <div class="metric"><span class="metric-label">待应用</span><strong id="pendingCount">–</strong></div>
+          <div class="metric"><span class="metric-label">用途版本</span><strong id="purposeVersion">–</strong></div>
+          <div class="metric"><span class="metric-label">字段纪元</span><strong id="epochSummary">–</strong></div>
+        </div>
+        <div class="fieldgrid" id="fieldChips"></div>
+        <p class="hint" id="scopeHint">勾选的字段将在校验后立即生效；撤出的字段会从块、索引与导出中清除，原值不再可取回。</p>
+        <div class="revocation-strip" id="revocationStrip" hidden></div>
+      </article>
+
+      <article class="panel" id="transferPanel">
+        <header class="panel-head">
+          <div>
+            <p class="eyebrow">02 · 接收</p>
+            <h2>分块下载与断线恢复</h2>
+          </div>
+          <div class="head-actions">
+            <label class="switch"><input type="checkbox" id="simulateBreak"><span>模拟断线</span></label>
+            <label class="inline-number">断开于第 <input type="number" id="breakAfter" min="1" max="6" value="3"> 块后</label>
+            <button class="btn btn-primary" id="startJob">开始采集</button>
+          </div>
+        </header>
+        <p class="lede">来源按 6 个块签发一次性范围令牌。接收端先校验字节长度与内容哈希，再逐行复核字段；半包直接丢弃，绝不跨版本拼接。</p>
+        <div class="chunk-grid" id="chunkGrid" aria-live="polite"></div>
+        <div class="transfer-columns">
+          <div>
+            <h3 class="subhead">本次复用判定</h3>
+            <ul class="plan" id="reusePlan"><li class="muted">尚无任务。首次采集将下载全部 6 块。</li></ul>
+          </div>
+          <div>
+            <h3 class="subhead">任务与令牌</h3>
+            <div id="jobSummary" class="stack muted">尚无任务记录。</div>
+            <div class="progress" id="jobProgress" hidden><span></span></div>
+            <div class="failure" id="jobFailure" hidden></div>
+          </div>
+        </div>
+      </article>
+
+      <article class="panel" id="indexPanel">
+        <header class="panel-head">
+          <div>
+            <p class="eyebrow">03 · 发布</p>
+            <h2>索引构建与查询页</h2>
+          </div>
+          <div class="head-actions">
+            <button class="btn btn-primary" id="buildIndex">构建并发布索引</button>
+          </div>
+        </header>
+        <p class="lede">发布采用比较并交换：构建期间只要任一字段的授权纪元变化，本次构建即作废，旧索引不会继续按旧范围服务。</p>
+        <div class="index-status" id="indexStatus"></div>
+        <div class="query-bar">
+          <input id="searchInput" type="search" placeholder="按客户编号或可见字段值筛选，例如 C-3007" autocomplete="off">
+          <button class="btn btn-quiet" id="runQuery">查询当前索引</button>
+        </div>
+        <div class="table-wrap" id="queryWrap"><p class="muted pad">索引发布后，这里会按当前授权渲染表格。</p></div>
+        <p class="hint" id="queryNote"></p>
+      </article>
+
+      <article class="panel" id="exportPanel">
+        <header class="panel-head">
+          <div>
+            <p class="eyebrow">04 · 交付</p>
+            <h2>导出与最终检查</h2>
+          </div>
+          <div class="head-actions">
+            <button class="btn btn-quiet" id="exportJson">导出 JSON</button>
+            <button class="btn btn-primary" id="exportCsv">导出 CSV</button>
+          </div>
+        </header>
+        <div class="checks" id="finalChecks"></div>
+        <div class="export-result" id="exportResult" hidden></div>
+        <h3 class="subhead">导出记录</h3>
+        <ul class="history" id="exportHistory"><li class="muted">尚无导出。</li></ul>
+      </article>
+    </section>
+
+    <aside class="column column-side">
+      <article class="panel panel-tight" id="policyPanel">
+        <header class="panel-head">
+          <div>
+            <p class="eyebrow">规则</p>
+            <h2>复用与发布条件</h2>
+          </div>
+        </header>
+        <h3 class="subhead">块可复用，当且仅当</h3>
+        <ol class="policy-list" id="reusePolicy"></ol>
+        <h3 class="subhead">可发布，当且仅当</h3>
+        <ol class="policy-list" id="publishPolicy"></ol>
+      </article>
+
+      <article class="panel panel-tight">
+        <header class="panel-head">
+          <div>
+            <p class="eyebrow">审计</p>
+            <h2>事件与清除墓碑</h2>
+          </div>
+        </header>
+        <ul class="audit" id="auditList"></ul>
+        <h3 class="subhead">清除墓碑</h3>
+        <ul class="tombstones" id="tombstoneList"><li class="muted">尚无撤权。</li></ul>
+      </article>
+
+      <article class="panel panel-tight subtle">
+        <h2>边界说明</h2>
+        <p>来源、接收、索引、查询与导出全部运行在本机。数据由 <code>config.js</code> 生成，邮箱统一使用 <code>example.test</code>；系统不发起任何外部请求。</p>
+        <p>失败详情只返回错误码、块号与字段名，不回显原值。</p>
+      </article>
+    </aside>
+  </main>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="/app.js" type="module"></script>
+</body>
+</html>

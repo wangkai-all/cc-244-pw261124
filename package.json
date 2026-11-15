@@ -1,0 +1,19 @@
+{
+  "name": "fieldscope-lab",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "本地字段范围采集演练台：用途授权、分块接收、分块复用、索引与导出校验",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test --test-concurrency=1 'test/*.test.js'",
+    "test:ui": "node test/ui/smoke.mjs",
+    "check": "node --check src/server.js && node --check src/app.js && node --check web/app.js"
+  },
+  "engines": {
+    "node": ">=22.5"
+  },
+  "devDependencies": {
+    "jsdom": "^26.1.0"
+  }
+}
